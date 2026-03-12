@@ -1,49 +1,21 @@
-
-import { adminDb, adminAuth } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
+import { checkAuth } from '@/lib/auth';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-// API para listar todas as congregações (uso restrito ao painel admin)
-// Utiliza o Firebase Admin SDK para contornar regras de segurança e garantir acesso total
 export async function GET(req: Request) {
     console.log('📡 API: Listando congregações...');
     try {
-        // Extrai o token de autenticação do header Authorization ou cookie de sessão
-        const authHeader = req.headers.get('Authorization');
-        let token = '';
+        const user = await checkAuth(req);
 
-        if (authHeader?.startsWith('Bearer ')) {
-            token = authHeader.split(' ')[1];
-        } else {
-            const cookie = req.headers.get('cookie');
-            token = cookie?.split('__session=')[1]?.split(';')[0] || '';
-        }
-
-        if (!token) {
-            console.warn('⚠️ API: Token não encontrado');
+        if (!user) {
             return NextResponse.json({ error: 'Sessão expirada' }, { status: 401 });
         }
 
-
-        let decodedToken;
-        try {
-            decodedToken = await adminAuth.verifyIdToken(token);
-        } catch (e: any) {
-            console.error('❌ API: Erro ao verificar token:', e.message);
-            return NextResponse.json({ error: 'Token inválido ou expirado' }, { status: 401 });
-        }
-
-        // Verifica se o usuário é administrador no Firestore
-        console.log('🔍 API: Verificando papel para user:', decodedToken.uid);
-        const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-        const userData = userDoc.data();
-
-        // Permite acesso se for ADMIN ou se for o email mestre
-        const isAdmin = userData?.role === 'ADMIN' || decodedToken.email === 'campobrancojw@gmail.com';
+        const isAdmin = user.role === 'ADMIN' || user.email === 'campobrancojw@gmail.com';
 
         if (!isAdmin) {
-            console.warn('🚫 API: Acesso negado para', decodedToken.email);
             return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
         }
 

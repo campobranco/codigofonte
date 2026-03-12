@@ -94,17 +94,26 @@ const adminApp: App = initAdminApp();
 const isMock = adminApp.name === '[mock]';
 
 // Evita chamar getFirestore/getAuth se o app for mock (comum no build do Next.js)
+// Mock robusto para o Firestore (evita erros de encadeamento como .where().orderBy().get())
+const createFirestoreMock = (collectionName: string) => {
+    const mock: any = {
+        doc: () => mock,
+        where: () => mock,
+        orderBy: () => mock,
+        limit: () => mock,
+        get: async () => {
+            throw new Error(`Firestore indisponível: Credenciais ausentes para acessar "${collectionName}". Verifique as variáveis de ambiente (FB_ADMIN_PRIVATE_KEY).`);
+        }
+    };
+    return mock;
+};
+
 export const adminDb: Firestore = !isMock
     ? getFirestore(adminApp, process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID || '(default)')
     : {
-        collection: (name: string) => ({
-            doc: (id: string) => ({ 
-                get: async () => { throw new Error(`Firestore indisponível: Credenciais ausentes (Coleção: ${name}). Verifique as variáveis de ambiente.`); },
-                set: async () => { throw new Error(`Firestore indisponível: Credenciais ausentes.`); }
-            }),
-            where: () => ({ get: async () => { throw new Error(`Firestore indisponível: Credenciais ausentes (Consultando ${name}).`); } })
-        })
+        collection: (name: string) => createFirestoreMock(name)
     } as any;
+
 
 export const adminAuth: Auth = !isMock
     ? getAuth(adminApp)
