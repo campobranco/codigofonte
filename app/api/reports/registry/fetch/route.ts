@@ -46,9 +46,13 @@ export async function GET(req: Request) {
             sharedLists: sharedLists || []
         });
     } catch (error: any) {
-        console.error("Registry Fetch API Error:", error);
+        console.error("Registry Fetch API Error:", error.message);
+        const isAuthError = ['TOKEN_EXPIRED', 'INVALID_TOKEN'].includes(error.message);
+        const status = isAuthError ? 401 : 500;
         return NextResponse.json({
-            error: error.message || 'Erro interno no servidor'
-        }, { status: 500 });
+            success: false,
+            error: isAuthError ? 'Sessão expirada' : 'Erro interno no servidor',
+            details: error.message
+        }, { status });
     }
 }

@@ -32,10 +32,15 @@ export async function GET(req: Request) {
         return NextResponse.json({ success: true, congregations });
 
     } catch (error: any) {
-        console.error('💥 Congregations List API Error:', error);
+        console.error('💥 Congregations List API Error:', error.message);
+        
+        const isAuthError = ['TOKEN_EXPIRED', 'INVALID_TOKEN'].includes(error.message);
+        const status = isAuthError ? 401 : 500;
+        
         return NextResponse.json({ 
-            error: 'Erro interno no servidor',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined 
-        }, { status: 500 });
+            success: false,
+            error: isAuthError ? 'Sessão expirada' : 'Erro interno no servidor',
+            details: error.message 
+        }, { status });
     }
 }

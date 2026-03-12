@@ -107,7 +107,13 @@ export async function GET(req: Request) {
             addresses
         });
     } catch (error: any) {
-        console.error("Cities Stats API Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("Cities Stats API Error:", error.message);
+        const isAuthError = ['TOKEN_EXPIRED', 'INVALID_TOKEN'].includes(error.message);
+        const status = isAuthError ? 401 : 500;
+        return NextResponse.json({ 
+            success: false,
+            error: isAuthError ? 'Sessão expirada' : 'Erro interno no servidor',
+            details: error.message 
+        }, { status });
     }
 }
