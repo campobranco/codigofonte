@@ -23,42 +23,17 @@ function initAdminApp(): App {
 
     console.log(`🔧 Firebase Admin: Iniciando para projeto [${projectId}]`);
 
-    // Prioridade 1: ADC (Application Default Credentials) - Ideal para App Hosting/Cloud Run
-    if (process.env.NODE_ENV === 'production') {
-        try {
-            console.log('🌐 Firebase Admin: Tentando ADC em produção...');
-            return initializeApp({
-                credential: applicationDefault(),
-                projectId: projectId
-            });
-        } catch (e: any) {
-            console.warn('⚠️ Firebase Admin: ADC falhou em produção, tentando outras chaves:', e.message);
-        }
-    }
-
-    // Prioridade 2: JSON completo
-    const adminConfigJson = process.env.FIREBASE_ADMIN_SDK_JSON;
-    if (adminConfigJson) {
-        try {
-            const serviceAccount = JSON.parse(adminConfigJson.replace(/^["']|["']$/g, '').trim());
-            console.log('✅ Firebase Admin: Inicializado via JSON');
-            return initializeApp({
-                credential: cert(serviceAccount),
-                projectId: serviceAccount.project_id || projectId
-            });
-        } catch (e) {
-            console.error('❌ Firebase Admin: Erro no JSON:', e);
-        }
-    }
-
-    // Prioridade 3: Variáveis individuais (App Hosting Secrets)
-    const rawKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY || process.env.FB_ADMIN_PRIVATE_KEY;
-    const clientEmail = (process.env.FIREBASE_ADMIN_CLIENT_EMAIL || process.env.FB_ADMIN_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL || '').replace(/^["']|["']$/g, '').trim();
+    // Prioridade 1: Chaves individuais (App Hosting Secrets) - Mais confiável para sessões manuais
+    const rawKey = process.env.FB_ADMIN_PRIVATE_KEY || process.env.FIREBASE_ADMIN_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY;
+    const clientEmail = (process.env.FB_ADMIN_CLIENT_EMAIL || process.env.FIREBASE_ADMIN_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL || '').replace(/^["']|["']$/g, '').trim();
 
     if (rawKey && clientEmail) {
         try {
-            const privateKey = rawKey.replace(/\\n/g, '\n').replace(/^["']|["']$/g, '').trim();
-            console.log('🚀 Firebase Admin: Inicializando via chaves individuais');
+            // Remove aspas, trata as quebras de linha literais \n e garante que a chave comece com o header correto
+            let privateKey = rawKey.replace(/^["']|["']$/g, '').trim();
+            privateKey = privateKey.replace(/\\n/g, '\n');
+            
+            console.log('🚀 Firebase Admin: Inicializando via chaves individuais (App Hosting)');
             return initializeApp({
                 credential: cert({ projectId, clientEmail, privateKey }),
                 projectId
@@ -67,6 +42,20 @@ function initAdminApp(): App {
             console.error('❌ Firebase Admin: Erro nas chaves individuais:', e.message);
         }
     }
+
+    // Prioridade 2: ADC (Application Default Credentials) - Fallback para ambiente de nuvem nativo
+    if (process.env.NODE_ENV === 'production') {
+        try {
+            console.log('🌐 Firebase Admin: Tentando ADC...');
+            return initializeApp({
+                credential: applicationDefault(),
+                projectId: projectId
+            });
+        } catch (e: any) {
+            console.warn('⚠️ Firebase Admin: ADC falhou:', e.message);
+        }
+    }
+
 
     // Prioridade 4: service-account.json local (dev)
     const saPath = path.join(process.cwd(), 'service-account.json');
