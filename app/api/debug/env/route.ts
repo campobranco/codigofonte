@@ -18,13 +18,14 @@ export async function GET() {
         ADMIN_PROJECT_ID: !isMock ? adminApp.options.projectId : 'N/A',
         INIT_ERROR: getAdminInitError() || 'Nenhum',
         
-        NODE_ENV: process.env.NODE_ENV,
-        VERCEL: !!process.env.VERCEL,
-        
         // Comprimentos para checagem
         KEY_LEN_1: process.env.FB_ADMIN_PRIVATE_KEY?.length || 0,
         KEY_LEN_2: process.env.FIREBASE_PRIVATE_KEY?.length || 0,
-        EMAIL_LEN: (process.env.FB_ADMIN_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL || '').length
+        EMAIL_LEN: (process.env.FB_ADMIN_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL || '').length,
+        
+        // Sanity checks
+        HAS_HEADERS: (process.env.FB_ADMIN_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY || '').includes('-----BEGIN PRIVATE KEY-----'),
+        HAS_FOOTERS: (process.env.FB_ADMIN_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY || '').includes('-----END PRIVATE KEY-----')
     };
 
     return NextResponse.json(envs);

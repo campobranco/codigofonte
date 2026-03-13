@@ -36,8 +36,21 @@ function initAdminApp(): App {
     console.log(`🔍 Firebase Admin: Check de variáveis - Chave: ${hasKey}, Email: ${hasEmail}`);
 
     // Prioridade 1: Chaves individuais (App Hosting / Vercel Secrets)
-    const rawKey = process.env.FB_ADMIN_PRIVATE_KEY || process.env.FIREBASE_ADMIN_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY || process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY;
-    const clientEmail = (process.env.FB_ADMIN_CLIENT_EMAIL || process.env.FIREBASE_ADMIN_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL || '').replace(/^["']|["']$/g, '').trim();
+    const rawKey = (
+        process.env.FB_ADMIN_PRIVATE_KEY || 
+        process.env.FIREBASE_ADMIN_PRIVATE_KEY || 
+        process.env.FIREBASE_PRIVATE_KEY || 
+        process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY ||
+        ''
+    ).trim();
+
+    const clientEmail = (
+        process.env.FB_ADMIN_CLIENT_EMAIL || 
+        process.env.FIREBASE_ADMIN_CLIENT_EMAIL || 
+        process.env.FIREBASE_CLIENT_EMAIL || 
+        process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL || 
+        ''
+    ).replace(/^["']|["']$/g, '').trim();
 
     if (rawKey && clientEmail) {
         try {
@@ -61,9 +74,9 @@ function initAdminApp(): App {
                 privateKey = `${privateKey}\n-----END PRIVATE KEY-----`;
             }
 
-            console.log(`🚀 Firebase Admin: Inicializando via chaves individuais. ID: ${projectId}`);
+            console.log(`🚀 Firebase Admin: Inicializando via chaves individuais. ID: [${projectId}]`);
             
-            return initializeApp({
+            const app = initializeApp({
                 credential: cert({ 
                     projectId: projectId, 
                     clientEmail: clientEmail, 
@@ -71,6 +84,9 @@ function initAdminApp(): App {
                 }),
                 projectId
             });
+
+            console.log("✅ Firebase Admin: Inicializado com sucesso!");
+            return app;
         } catch (e: any) {
             lastInitError = `Erro IndividualKeys: ${e.message}`;
             console.error('❌ Firebase Admin: Erro nas chaves individuais:', e.message);

@@ -11,6 +11,7 @@ import CookieBanner from './components/CookieBanner';
 import PreviewIndicator from './components/PreviewIndicator';
 import { APP_VERSION } from '@/lib/version';
 import { Toaster } from 'sonner';
+import { Analytics } from '@vercel/analytics/react';
 
 
 const inter = Inter({ subsets: ['latin'] })
@@ -80,12 +81,14 @@ export default function RootLayout({
       <body className={`${inter.className} min-h-screen flex flex-col`} suppressHydrationWarning={true}>
         <AuthProvider>
           <ThemeProvider>
+            <Analytics />
             <PreviewIndicator />
             {/* <FCMManager /> Removed */}
             <SimulationBanner />
             <FloatingReportButton />
             <CookieBanner />
             <Toaster richColors position="top-center" />
+            <Analytics />
             <main className="app-shell flex-1">
               {children}
             </main>
