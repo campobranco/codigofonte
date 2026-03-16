@@ -1,6 +1,12 @@
-# Informações do Repositório
+# Informações do Projeto
 
-**Repositório Oficial do Projeto:**
+## Repositórios do GitHub
+
+**Repositório Oficial:**
 `https://github.com/campobranco/codigofonte.git`
 
-*(Atualizado após reconfiguração do ambiente)*
+## Bancos de Dados (Firebase)
+
+**Projeto:** `campo-branco`
+- **Banco de Dados de Produção:** `(default)`
+- **Banco de Dados de Desenvolvimento:** `campobrancodev`
