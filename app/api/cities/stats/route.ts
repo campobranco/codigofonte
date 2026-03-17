@@ -2,6 +2,41 @@ import { adminDb } from '@/lib/firebase-admin';
 import { checkAuth } from '@/lib/auth';
 import { NextResponse } from 'next/server';
 
+// Função auxiliar para converter recursivamente Timestamps do Firestore para ISO Strings
+// Isso evita erros de serialização no NextResponse.json()
+function serializeTimestamps(obj: any): any {
+    if (obj === null || obj === undefined) return obj;
+    
+    // Se for um Timestamp do Firestore (tem método toDate)
+    if (typeof obj.toDate === 'function') {
+        const date = obj.toDate();
+        return isNaN(date.getTime()) ? null : date.toISOString();
+    }
+    
+    // Se for uma Date normal
+    if (obj instanceof Date) {
+        return isNaN(obj.getTime()) ? null : obj.toISOString();
+    }
+    
+    // Se for Array
+    if (Array.isArray(obj)) {
+        return obj.map(item => serializeTimestamps(item));
+    }
+    
+    // Se for Objeto
+    if (typeof obj === 'object') {
+        const result: any = {};
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                result[key] = serializeTimestamps(obj[key]);
+            }
+        }
+        return result;
+    }
+    
+    return obj;
+}
+
 export async function GET(req: Request) {
     try {
         const user = await checkAuth(req);
@@ -24,7 +59,10 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: 'Congregação não identificada' }, { status: 400 });
         }
 
-        // 1. Fetch all territories for this congregation
+        const start = startDateString ? new Date(startDateString) : null;
+        const end = endDateString ? new Date(endDateString) : null;
+
+        // 1. Fetch all territories
         let territoriesSnapshot = await adminDb.collection('territories')
             .where('congregationId', '==', congregationId)
             .get();
@@ -37,10 +75,10 @@ export async function GET(req: Request) {
 
         const territories = territoriesSnapshot.docs.map(doc => ({
             id: doc.id,
-            ...doc.data()
+            ...serializeTimestamps(doc.data())
         }));
 
-        // 2. Fetch all shared_lists for this congregation (filter in memory for speed/indexes)
+        // 2. Fetch shared_lists (history)
         let assignmentsSnapshot = await adminDb.collection('shared_lists')
             .where('congregationId', '==', congregationId)
             .get();
@@ -52,33 +90,23 @@ export async function GET(req: Request) {
         }
 
         let history = assignmentsSnapshot.docs
-            .map(doc => {
-                const data = doc.data();
-                const dateVal = data.returnedAt || data.returned_at;
-                const date = dateVal?.toDate ? dateVal.toDate() : (dateVal ? new Date(dateVal) : null);
-                return { 
-                    id: doc.id, 
-                    ...data,
-                    returnedAt: date ? date.toISOString() : null 
-                };
-            })
+            .map(doc => ({ id: doc.id, ...serializeTimestamps(doc.data()) }))
             .filter((item: any) => item.status === 'completed');
 
-        // Filter by date logically
-        if (startDateString || endDateString) {
-            const start = startDateString ? new Date(startDateString) : null;
-            const end = endDateString ? new Date(endDateString) : null;
-
+        // Filter by date
+        if (start || end) {
             history = history.filter((item: any) => {
-                const date = item.returnedAt ? new Date(item.returnedAt) : null;
-                if (!date) return false;
+                const dateStr = item.returnedAt || item.returned_at;
+                if (!dateStr) return false;
+                const date = new Date(dateStr);
+                if (isNaN(date.getTime())) return false;
                 if (start && date < start) return false;
                 if (end && date > end) return false;
                 return true;
             });
         }
 
-        // 3. Fetch all Addresses for this congregation
+        // 3. Fetch Addresses
         let addressesSnapshot = await adminDb.collection('addresses')
             .where('congregationId', '==', congregationId)
             .get();
@@ -91,38 +119,26 @@ export async function GET(req: Request) {
 
         let addresses = addressesSnapshot.docs.map(doc => ({
             id: doc.id,
-            ...doc.data()
+            ...serializeTimestamps(doc.data())
         }));
 
-        if (startDateString || endDateString) {
-            const start = startDateString ? new Date(startDateString) : null;
-            const end = endDateString ? new Date(endDateString) : null;
-
+        if (start || end) {
             addresses = addresses.filter((item: any) => {
-                const dateVal = item.lastVisitedAt || item.last_visited_at;
-                const visitedAt = dateVal?.toDate ? dateVal.toDate() : (dateVal ? new Date(dateVal) : null);
-                if (!visitedAt) return false;
-                if (start && visitedAt < start) return false;
-                if (end && visitedAt > end) return false;
+                const dateStr = item.lastVisitedAt || item.last_visited_at;
+                if (!dateStr) return false;
+                const date = new Date(dateStr);
+                if (isNaN(date.getTime())) return false;
+                if (start && date < start) return false;
+                if (end && date > end) return false;
                 return true;
             });
         }
 
-        // Serialize addresses to avoid Timestamp issues
-        const serializedAddresses = addresses.map((a: any) => {
-            const dateVal = a.lastVisitedAt || a.last_visited_at;
-            const date = dateVal?.toDate ? dateVal.toDate() : (dateVal ? new Date(dateVal) : null);
-            return {
-                ...a,
-                lastVisitedAt: date ? date.toISOString() : null
-            };
-        });
-
         return NextResponse.json({
             success: true,
             territories,
-            history: history,
-            addresses: serializedAddresses
+            history,
+            addresses
         });
     } catch (error: any) {
         console.error("Cities Stats API Error:", error);

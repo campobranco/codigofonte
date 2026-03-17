@@ -99,13 +99,15 @@ export default function RootLayout({
                 });
               }
 
-              // 3. Salva a nova versão e força um reload total ignorando o cache
+              // 3. Salva a nova versão e força um reload total ignorando o cache (v3)
               localStorage.setItem('app_version', CURRENT_VERSION);
               
               // Pequeno delay para garantir que as limpezas acima comecem
               setTimeout(() => {
-                window.location.reload(true);
-              }, 500);
+                const url = new URL(window.location.href);
+                url.searchParams.set('cv', Date.now().toString());
+                window.location.href = url.toString();
+              }, 800);
             }
           } catch (e) {
             console.error('Erro no Cache Buster:', e);
