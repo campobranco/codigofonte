@@ -52,7 +52,16 @@ export async function GET(req: Request) {
         }
 
         let history = assignmentsSnapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .map(doc => {
+                const data = doc.data();
+                const dateVal = data.returnedAt || data.returned_at;
+                const date = dateVal?.toDate ? dateVal.toDate() : (dateVal ? new Date(dateVal) : null);
+                return { 
+                    id: doc.id, 
+                    ...data,
+                    returnedAt: date ? date.toISOString() : null 
+                };
+            })
             .filter((item: any) => item.status === 'completed');
 
         // Filter by date logically
@@ -61,11 +70,10 @@ export async function GET(req: Request) {
             const end = endDateString ? new Date(endDateString) : null;
 
             history = history.filter((item: any) => {
-                const dateVal = item.returnedAt || item.returned_at;
-                const returnedAt = dateVal?.toDate ? dateVal.toDate() : (dateVal ? new Date(dateVal) : null);
-                if (!returnedAt) return false;
-                if (start && returnedAt < start) return false;
-                if (end && returnedAt > end) return false;
+                const date = item.returnedAt ? new Date(item.returnedAt) : null;
+                if (!date) return false;
+                if (start && date < start) return false;
+                if (end && date > end) return false;
                 return true;
             });
         }
@@ -100,20 +108,31 @@ export async function GET(req: Request) {
             });
         }
 
+        // Serialize addresses to avoid Timestamp issues
+        const serializedAddresses = addresses.map((a: any) => {
+            const dateVal = a.lastVisitedAt || a.last_visited_at;
+            const date = dateVal?.toDate ? dateVal.toDate() : (dateVal ? new Date(dateVal) : null);
+            return {
+                ...a,
+                lastVisitedAt: date ? date.toISOString() : null
+            };
+        });
+
         return NextResponse.json({
             success: true,
             territories,
-            history,
-            addresses
+            history: history,
+            addresses: serializedAddresses
         });
     } catch (error: any) {
-        console.error("Cities Stats API Error:", error.message);
+        console.error("Cities Stats API Error:", error);
         const isAuthError = ['TOKEN_EXPIRED', 'INVALID_TOKEN'].includes(error.message);
         const status = isAuthError ? 401 : 500;
         return NextResponse.json({ 
             success: false,
-            error: error.message,
-            details: isAuthError ? 'AUTH_ERROR' : 'SERVER_ERROR'
+            error: error.message || "Internal Server Error",
+            code: isAuthError ? 'AUTH_ERROR' : 'SERVER_ERROR',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         }, { status });
     }
 }

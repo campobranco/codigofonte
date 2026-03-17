@@ -191,6 +191,8 @@ Arquivos relevantes:
 Pontos importantes:
 - PWA é ativada pelo `next-pwa` e desativada em `NODE_ENV=development`.
 - **Cache Buster Agressivo (v2)**: O `layout.tsx` detecta mudanças de versão via `localStorage`. Se a versão mudar, limpa todos os caches nomeados e desregistra Service Workers, forçando um reload total. Isso garante que novos cabeçalhos de CSP e assets entrem em vigor imediatamente.
+- **Correção Erro 500 (API)**: Identificado que o `NextResponse.json` falha ao serializar objetos `Timestamp` do Firestore. Implementada conversão manual para strings ISO em `app/api/cities/stats/route.ts`.
+- **Fluxo de Deploy Dinâmico**: Descoberto que alterações no `middleware.ts` (como CSP) e `API` exigem obrigatoriamente um `git push` para o App Hosting para serem efetivadas. O comando `firebase deploy --only hosting` atualiza apenas a camada de cache estático e configurações do `firebase.json`.
 - O layout limpa caches e registrações antigas de Service Worker para evitar versões obsoletas.
 
 ## LGPD e Auditoria
