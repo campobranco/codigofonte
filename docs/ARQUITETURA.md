@@ -190,6 +190,7 @@ Arquivos relevantes:
 
 Pontos importantes:
 - PWA é ativada pelo `next-pwa` e desativada em `NODE_ENV=development`.
+- **Cache Buster Agressivo (v2)**: O `layout.tsx` detecta mudanças de versão via `localStorage`. Se a versão mudar, limpa todos os caches nomeados e desregistra Service Workers, forçando um reload total. Isso garante que novos cabeçalhos de CSP e assets entrem em vigor imediatamente.
 - O layout limpa caches e registrações antigas de Service Worker para evitar versões obsoletas.
 
 ## LGPD e Auditoria

@@ -70,23 +70,45 @@ export default function RootLayout({
             window.location.replace('https://campo-branco.web.app' + window.location.pathname + window.location.search + window.location.hash);
           }
 
-          // Cache Buster - Força a limpeza de Service Workers e Caches obsoletos (removendo resquícios do Supabase)
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-              for(let registration of registrations) {
-                // Se o Service Worker for antigo (baseado na versão ou se houver erros de Supabase detectados)
-                registration.unregister();
-                console.log('Service Worker antigo desregistrado para atualização forçada.');
+          // Injetando versão do app para o script
+          const CURRENT_VERSION = "${APP_VERSION}";
+          
+          // Cache Buster Agressivo (v2) - Força atualização se a versão mudar
+          try {
+            const lastVersion = localStorage.getItem('app_version');
+            
+            if (lastVersion !== CURRENT_VERSION) {
+              console.log('Versão alterada detectada (' + lastVersion + ' -> ' + CURRENT_VERSION + '). Limpando caches...');
+              
+              // 1. Limpa todos os caches nomeados
+              if ('caches' in window) {
+                caches.keys().then(names => {
+                  Promise.all(names.map(name => caches.delete(name))).then(() => {
+                    console.log('Todos os caches de armazenamento foram removidos.');
+                  });
+                });
               }
-            });
-          }
 
-          // Limpa caches do navegador para garantir o download das versões mais recentes
-          if ('caches' in window) {
-            caches.keys().then(function(names) {
-              for (let name of names) caches.delete(name);
-              console.log('Caches do navegador limpos para garantir nova versão.');
-            });
+              // 2. Desregistra todos os Service Workers
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                  for (let registration of registrations) {
+                    registration.unregister();
+                  }
+                  console.log('Service Workers desregistrados.');
+                });
+              }
+
+              // 3. Salva a nova versão e força um reload total ignorando o cache
+              localStorage.setItem('app_version', CURRENT_VERSION);
+              
+              // Pequeno delay para garantir que as limpezas acima comecem
+              setTimeout(() => {
+                window.location.reload(true);
+              }, 500);
+            }
+          } catch (e) {
+            console.error('Erro no Cache Buster:', e);
           }
         ` }} />
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossOrigin="" />
