@@ -5,8 +5,19 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
-// Configuração do Firebase lida das variáveis de ambiente
-const firebaseConfig = {
+// Verifica se está rodando em ambiente local para usar credenciais de desenvolvimento
+const isLocalhost = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+// Configuração do Firebase lida das variáveis de ambiente (com bypass para localhost)
+const firebaseConfig = isLocalhost ? {
+  apiKey: "AIzaSyDOAEMjzEVhcWBSuxB1RiqwB4vvGRNlSSk",
+  authDomain: "campobrancodev.firebaseapp.com",
+  projectId: "campobrancodev",
+  storageBucket: "campobrancodev.firebasestorage.app",
+  messagingSenderId: "928550834050",
+  appId: "1:928550834050:web:adcf6d8895f1b1b22c899b"
+} : {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
     projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
