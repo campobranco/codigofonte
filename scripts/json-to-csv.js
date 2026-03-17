@@ -4,7 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 /**
- * Script de Conversão V4 - Estrito e Limpo para Supabase.
+ * Script de Conversão V4 - Estrito e Limpo para Migração.
  * - Datas no formato: 2026-02-18 10:00:00+00
  * - Quebra de linha Windows (\r\n)
  * - UUIDs determinísticos apenas para strings não vazias.

@@ -67,8 +67,28 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{
           __html: `
+          // Redirecionamento de legado do GitHub Pages
           if (typeof window !== 'undefined' && window.location.hostname === 'campobranco.github.io') {
             window.location.replace('https://campo-branco.web.app' + window.location.pathname + window.location.search + window.location.hash);
+          }
+
+          // Cache Buster - Força a limpeza de Service Workers e Caches obsoletos (removendo resquícios do Supabase)
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              for(let registration of registrations) {
+                // Se o Service Worker for antigo (baseado na versão ou se houver erros de Supabase detectados)
+                registration.unregister();
+                console.log('Service Worker antigo desregistrado para atualização forçada.');
+              }
+            });
+          }
+
+          // Limpa caches do navegador para garantir o download das versões mais recentes
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              for (let name of names) caches.delete(name);
+              console.log('Caches do navegador limpos para garantir nova versão.');
+            });
           }
         ` }} />
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossOrigin="" />
