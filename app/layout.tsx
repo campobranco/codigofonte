@@ -89,14 +89,15 @@ export default function RootLayout({
                 });
               }
 
-              // 2. Desregistra todos os Service Workers
+              // 2. Desregistra todos os Service Workers e registra o Kill Switch
               if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistrations().then(registrations => {
                   for (let registration of registrations) {
                     registration.unregister();
                   }
-                  console.log('Service Workers desregistrados.');
-                });
+                  console.log('Service Workers desregistrados. Registrando Kill Switch...');
+                  return navigator.serviceWorker.register('/sw-kill.js');
+                }).catch(err => console.log('Erro ao limpar SWs:', err));
               }
 
               // 3. Salva a nova versão e força um reload total ignorando o cache (v3)
