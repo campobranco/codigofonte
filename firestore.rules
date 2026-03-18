@@ -63,7 +63,13 @@ service cloud.firestore {
     // 2. Coleção de Usuários
     match /users/{userId} {
       // Prioriza check de UID próprio para evitar recursão no getAuthRole()
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin() || isServant());
+      // Publicadores podem ler outros usuários SE forem da mesma congregação
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        isAdmin() || 
+        isServant() || 
+        isSameCongregation(resource.data)
+      );
       allow create: if isAuthenticated() && request.auth.uid == userId;
       allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin() || isServant());
       allow delete: if isAdmin();

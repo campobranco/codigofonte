@@ -11,6 +11,7 @@ import {
     collection,
     query,
     where,
+    or,
     orderBy,
     limit,
     serverTimestamp,
@@ -145,7 +146,10 @@ export default function DashboardPage() {
 
                 const q = query(
                     collection(db, 'shared_lists'),
-                    where('assigned_to', '==', userId)
+                    or(
+                        where('assigned_to', '==', userId),
+                        where('assignedTo', '==', userId)
+                    )
                 );
 
                 const querySnapshot = await getDocs(q);
