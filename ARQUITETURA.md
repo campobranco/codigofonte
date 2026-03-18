@@ -112,6 +112,7 @@ Para facilitar deploys Open Source e novas instâncias do Campo Branco:
 - v0.7.13-beta: Corrigida potencial recursão nas regras do Firestore e melhorada a performance de leitura do perfil.
 - v0.7.14-beta: Padronização de campos (`assigned_to`) e correção da configuração de banco de dados no `.env.local`.
 - v0.7.15-beta: Reversão do ID do banco de dados para `default` e simplificação das regras de permissão para aceitação de listas.
+- v0.7.16-beta: Deploy direto das regras do Firestore para garantir sincronização entre o código local e a nuvem.
   - Correção de erro de permissão na criação de listas compartilhadas: Adicionada regra para a coleção `shared_list_snapshots` e inclusão de `congregationId` nos documentos de snapshot para validação de segurança.
   - Substituição total do componente `<Image>` do Next.js por tags `<img>` nativas em toda a aplicação (incluindo Login, Dashboard e Settings) para evitar conflitos de runtime com o construtor global `Image` do navegador.
   - Implementação de monitoramento em tempo real (`onSnapshot`) para o perfil do usuário no `AuthContext`, permitindo que alterações de papel (role) e congregação sejam refletidas instantaneamente na interface sem necessidade de recarregamento manual (Versão 0.7.0-beta).
