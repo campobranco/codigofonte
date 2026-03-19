@@ -50,6 +50,21 @@ export async function reportVisit(shareId: string, visitData: any) {
         };
 
         const docRef = await addDoc(collection(db, TABLE), finalVisitData);
+
+        // Atualiza ativamente o documento do endereço correspondente com o status
+        if (visitData.address_id) {
+            try {
+                await updateDoc(doc(db, 'addresses', visitData.address_id), {
+                    visit_status: visitData.status,
+                    last_visited_at: new Date().toISOString(),
+                    last_visited_by: visitData.user_id || visitData.userId || null,
+                    notes: visitData.notes || ''
+                });
+            } catch (err) {
+                console.warn('Silent skip address update (permissions caching or timeout)', err);
+            }
+        }
+
         return { success: true, id: docRef.id };
     } catch (error: any) {
         console.error('Error reporting visit:', error);
@@ -89,7 +104,7 @@ export async function deleteVisitByAddressAndShare(addressId: string, shareId: s
     try {
         const q = query(
             collection(db, TABLE),
-            where('addressId', '==', addressId),
+            where('address_id', '==', addressId),
             where('sharedListId', '==', shareId),
             limit(1)
         );
@@ -98,6 +113,18 @@ export async function deleteVisitByAddressAndShare(addressId: string, shareId: s
 
         const batch = writeBatch(db);
         snapshot.docs.forEach(d => batch.delete(d.ref));
+
+        // Also revert the address visit_status
+        try {
+            batch.update(doc(db, 'addresses', addressId), {
+                visit_status: null,
+                last_visited_at: null,
+                last_visited_by: null
+            });
+        } catch (err) {
+            console.warn('Silent skip address reset', err);
+        }
+
         await batch.commit();
 
         return { success: true };

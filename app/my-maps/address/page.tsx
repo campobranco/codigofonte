@@ -664,7 +664,7 @@ function AddressListContent() {
             const visitsRef = collection(db, 'visits');
             const q = query(
                 visitsRef,
-                where('addressId', '==', addr.id),
+                where('address_id', '==', addr.id),
                 orderBy('createdAt', 'desc'),
                 limit(1)
             );
@@ -675,6 +675,15 @@ function AddressListContent() {
 
             const resData = await deleteVisit(latestVisit.id);
             if (!resData.success) throw new Error(resData.error);
+
+            // Also reset the address document in Firestore
+            try {
+                await updateDoc(doc(db, 'addresses', addr.id), {
+                    visit_status: null,
+                    last_visited_at: null,
+                    last_visited_by: null
+                });
+            } catch(e) { console.warn(e); }
 
             toast.success("Marcação removida com sucesso!");
             fetchAddresses();
@@ -722,7 +731,8 @@ function AddressListContent() {
                 onDragOver={(e) => handleDragOver(e, addr.id)}
                 onDragEnd={handleDragEnd}
                 className={`group bg-surface rounded-md p-4 border shadow-md hover:shadow-md transition-all 
-                    ${(addr.visit_status === 'moved' || (addr as any).visitStatus === 'moved') ? 'border-2 border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-surface-border'}
+                    ${(addr.visit_status === 'moved' || (addr as any).visitStatus === 'moved') ? 'border-2 border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 
+                      (addr.visit_status === 'do_not_visit' || (addr as any).visitStatus === 'do_not_visit') ? 'border-2 border-red-500 bg-red-50/50 dark:bg-red-900/20' : 'border-surface-border'}
                     ${draggedId === addr.id ? 'opacity-20 transition-none scale-95' : ''} 
                     ${openMenuId === addr.id ? 'relative z-20 ring-1 ring-primary-100 dark:ring-primary-900' : ''}`}
             >

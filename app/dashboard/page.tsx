@@ -203,7 +203,7 @@ export default function DashboardPage() {
 
         fetchMyAssignments();
 
-    }, [user, isAdminRoleGlobal]);
+    }, [user, isAdminRoleGlobal, congregationId, role]);
 
     // Close menu on click outside
     useEffect(() => {
@@ -236,21 +236,26 @@ export default function DashboardPage() {
             }
 
             const usersMap: Record<string, string> = {};
-            try {
-                const usersRef = collection(db, 'users');
-                let uQ;
-                if (congregationId) {
-                    uQ = query(usersRef, where('congregationId', '==', congregationId));
-                } else {
-                    uQ = query(usersRef, limit(500));
+            if (user?.uid) {
+                usersMap[user.uid] = profileName || "Você";
+            }
+            if (isElder || isServant || role === 'ADMIN') {
+                try {
+                    const usersRef = collection(db, 'users');
+                    let uQ;
+                    if (congregationId) {
+                        uQ = query(usersRef, where('congregationId', '==', congregationId));
+                    } else {
+                        uQ = query(usersRef, limit(500));
+                    }
+                    const usersSnap = await getDocs(uQ);
+                    usersSnap.forEach(doc => {
+                        const data = doc.data();
+                        usersMap[doc.id] = data.name || "";
+                    });
+                } catch (e) {
+                    console.warn("Error fetching users map:", e);
                 }
-                const usersSnap = await getDocs(uQ);
-                usersSnap.forEach(doc => {
-                    const data = doc.data();
-                    usersMap[doc.id] = data.name || "";
-                });
-            } catch (e) {
-                console.warn("Error fetching users map:", e);
             }
 
             const querySnapshot = await getDocs(q);

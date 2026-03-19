@@ -81,6 +81,7 @@ function SharedPreviewContent() {
     const [loading, setLoading] = useState(true);
     const [title, setTitle] = useState('');
     const [subtitle, setSubtitle] = useState('');
+    const [cityName, setCityName] = useState('');
     const [items, setItems] = useState<PreviewItem[]>([]);
     const [pageCongregationId, setPageCongregationId] = useState<string | null>(null);
     const [error, setError] = useState('');
@@ -202,10 +203,14 @@ function SharedPreviewContent() {
             });
 
             setTitle(mainData.name);
-            setSubtitle(type === 'territory'
-                ? `Território` + (mainData.notes ? ` - ${mainData.notes}` : '')
-                : (mainData.description || mainData.notes || "Cidade")
-            );
+            if (type === 'territory') {
+                setCityName(mainData.notes || "");
+                setSubtitle("Território");
+            } else {
+                setSubtitle(mainData.description || mainData.notes || "Cidade");
+                setCityName("");
+            }
+            
             setItems(mergedItems);
             setLoading(false);
 
@@ -634,8 +639,15 @@ function SharedPreviewContent() {
                     <ArrowLeft className="w-5 h-5 text-muted hover:text-main" />
                 </button>
                 <div className="flex flex-col">
-                    <h1 className="font-bold text-lg text-main leading-tight">{title}</h1>
-                    <span className="text-xs text-primary dark:text-primary-light font-bold uppercase tracking-wider">{subtitle}</span>
+                    <div className="flex items-center gap-2">
+                        <h1 className="font-extrabold text-2xl text-main leading-tight">{title}</h1>
+                        {cityName && (
+                           <span className="text-sm font-bold text-primary dark:text-primary-light uppercase bg-primary-50 dark:bg-primary-900/10 px-2 py-0.5 rounded-md border border-primary-100 dark:border-primary-900/20">
+                               {cityName}
+                           </span>
+                        )}
+                    </div>
+                    <span className="text-xs text-muted font-bold uppercase tracking-wider">{subtitle}</span>
                 </div>
             </header>
 

@@ -15,9 +15,11 @@ service cloud.firestore {
              request.auth.token.email == 'campobrancojw@gmail.com';
     }
 
-    // Busca o papel do usuário (padrão: PUBLICADOR)
+    // Busca o papel do usuário (padrão: PUBLICADOR) de forma robusta
     function getAuthRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'PUBLICADOR');
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+             ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'PUBLICADOR')
+             : 'PUBLICADOR';
     }
 
     function isAdmin() {
@@ -32,10 +34,6 @@ service cloud.firestore {
       return isAuthenticated() && (getAuthRole() == 'SERVO' || isElder());
     }
 
-    function isPublisher() {
-      return isAuthenticated() && (getAuthRole() == 'PUBLICADOR' || isServant());
-    }
-
     // --- HELPERS DE CONGREGAÇÃO (ROBUSTOS) ---
     
     // Obtém o ID da congregação de um mapa de dados (suporta camelCase e snake_case)
@@ -45,10 +43,9 @@ service cloud.firestore {
 
     // Verifica se o documento pertence à congregação do usuário logado
     function isSameCongregation(data) {
-      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      let userCongId = getCongId(userDoc);
-      let docCongId = getCongId(data);
-      return userCongId != null && docCongId == userCongId;
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             getCongId(get(/databases/$(database)/documents/users/$(request.auth.uid)).data) != null &&
+             getCongId(get(/databases/$(database)/documents/users/$(request.auth.uid)).data) == getCongId(data);
     }
 
     // --- REGRAS POR COLEÇÃO ---
@@ -77,38 +74,37 @@ service cloud.firestore {
 
     // 3. Cidades
     match /cities/{id} {
-      allow read: if isAuthenticated() && (isAdmin() || isServant() || getAuthRole() == 'PUBLICADOR');
+      allow read: if isAuthenticated() && (isAdmin() || isServant() || getAuthRole() == 'PUBLICADOR' || getAuthRole() == 'PUBLICADOR_SEM_ACESSO');
       allow create, update, delete: if isAdmin() || isServant();
     }
 
     // 4. Territórios e Endereços
     match /territories/{id} {
-      allow read: if isAuthenticated() && (isAdmin() || isServant() || getAuthRole() == 'PUBLICADOR');
+      allow read: if isAuthenticated() && (isAdmin() || isServant() || getAuthRole() == 'PUBLICADOR' || getAuthRole() == 'PUBLICADOR_SEM_ACESSO');
       allow create, update, delete: if isAdmin() || isServant();
     }
 
     match /addresses/{id} {
-      allow read: if isAuthenticated() && (isAdmin() || isServant() || getAuthRole() == 'PUBLICADOR');
-      allow create, update, delete: if isAdmin() || isServant();
+      allow read: if isAuthenticated();
+      allow create, delete: if isAdmin() || isServant();
+      allow update: if isAuthenticated() && (
+        isAdmin() || isServant() || 
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['visit_status', 'last_visited_at', 'last_visited_by', 'notes', 'tags_snapshot', 'visitStatus', 'visitNotes'])
+      );
       
       // Subcoleção de Histórico de Endereço
       match /history/{histId} {
-        allow read: if isAuthenticated() && (isAdmin() || isServant() || getAuthRole() == 'PUBLICADOR');
-        allow create, update, delete: if isAuthenticated();
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
       }
     }
 
     // 5. Visitas (Histórico Individual)
     match /visits/{id} {
-      allow read: if isAuthenticated() && (isAdmin() || isServant() || getAuthRole() == 'PUBLICADOR');
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (
-        isAdmin() || 
-        isServant() || 
-        resource.data.userId == request.auth.uid || 
-        resource.data.user_id == request.auth.uid
-      );
-      allow delete: if isAdmin() || isServant() || (resource.data.userId == request.auth.uid || resource.data.user_id == request.auth.uid);
+      allow update, delete: if isAuthenticated();
     }
 
     // 6. Listas Compartilhadas (Cartões)

@@ -61,11 +61,11 @@ export default function VisitsHistory({ scope = 'all', showViewAll = true }: { s
         setLoading(true);
         try {
             const visitsRef = collection(db, 'visits');
-            let q = query(visitsRef, orderBy('visitDate', 'desc'), limit(showViewAll ? 20 : 100));
+            let q = query(visitsRef, orderBy('visit_date', 'desc'), limit(showViewAll ? 20 : 100));
 
             if (role !== 'ADMIN') {
                 if (congregationId) {
-                    q = query(visitsRef, where('congregationId', '==', congregationId), orderBy('visitDate', 'desc'), limit(showViewAll ? 20 : 100));
+                    q = query(visitsRef, where('congregationId', '==', congregationId), orderBy('visit_date', 'desc'), limit(showViewAll ? 20 : 100));
                 } else {
                     setVisits([]);
                     setLoading(false);
@@ -113,7 +113,10 @@ export default function VisitsHistory({ scope = 'all', showViewAll = true }: { s
             }
 
             // Fetch users
-            if (userIds.length > 0) {
+            if (user?.uid) {
+                userMap[user.uid] = profileName || "Você";
+            }
+            if (userIds.length > 0 && (isElder || isServant || role === 'ADMIN')) {
                 const chunkedUserIds = [];
                 for (let i = 0; i < userIds.length; i += 30) {
                     chunkedUserIds.push(userIds.slice(i, i + 30));
@@ -122,11 +125,16 @@ export default function VisitsHistory({ scope = 'all', showViewAll = true }: { s
                 await Promise.all(chunkedUserIds.map(async (chunk) => {
                     const qUser = query(
                         collection(db, 'users'), 
-                        where(documentId(), 'in', chunk),
-                        where('congregationId', '==', congregationId)
+                        where(documentId(), 'in', chunk)
                     );
                     const userSnap = await getDocs(qUser);
-                    userSnap.forEach(docSnap => userMap[docSnap.id] = docSnap.data().name);
+                    userSnap.forEach(docSnap => {
+                        const data = docSnap.data();
+                        const fetchedName = data.name || data.profileName;
+                        if (fetchedName) {
+                            userMap[docSnap.id] = fetchedName;
+                        }
+                    });
                 }));
             }
 
@@ -270,11 +278,11 @@ export default function VisitsHistory({ scope = 'all', showViewAll = true }: { s
 
     const getStatusLabel = (status: string) => {
         switch (status) {
-            case 'contacted': return { label: 'Encontrado', color: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' };
-            case 'not_contacted': return { label: 'Não Enc.', color: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400' };
-            case 'moved': return { label: 'Mudou-se', color: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' };
-            case 'do_not_visit': return { label: 'Não Visitar', color: 'bg-red-900 dark:bg-red-950 text-white' };
-            default: return { label: status, color: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400' };
+            case 'contacted': return { label: 'Encontrado', color: 'bg-green-50 text-green-700 border border-green-500 dark:bg-green-900/20 dark:border-green-600 dark:text-green-400' };
+            case 'not_contacted': return { label: 'Não Enc.', color: 'bg-orange-50 text-orange-600 border border-orange-500 dark:bg-orange-900/20 dark:border-orange-600 dark:text-orange-400' };
+            case 'moved': return { label: 'Mudou-se', color: 'bg-blue-50 text-blue-600 border border-blue-500 dark:bg-blue-900/20 dark:border-blue-600 dark:text-blue-400' };
+            case 'do_not_visit': return { label: 'Não Visitar', color: 'bg-red-50 text-red-600 border border-red-500 dark:bg-red-900/20 dark:border-red-600 dark:text-red-400' };
+            default: return { label: status, color: 'bg-gray-50 text-gray-600 border border-gray-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400' };
         }
     };
 
@@ -336,7 +344,7 @@ export default function VisitsHistory({ scope = 'all', showViewAll = true }: { s
                     )}
                 </div>
             ) : (
-                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-4">
                     {visits.map((visit) => (
                         <div key={visit.id} className="p-4 rounded-lg bg-background border border-surface-border hover:border-purple-200 dark:hover:border-purple-800 transition-colors group">
 
